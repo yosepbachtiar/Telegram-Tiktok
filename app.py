@@ -20,15 +20,91 @@ else:
     logger.debug(f"Token loaded: {token}")
 
 api = Scraper()
-BOT_USERNAME = '@ManukaAI_Bot'
+BOT_USERNAME = '@douyindownloaderbot'
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Support me on : https://www.paypal.me/ardha27')
 
-# ... (rest of your code)
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('Please type something so I can respond')
+
+async def custom_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('This is a custom command')
+
+async def hybrid_parsing(url: str) -> dict:
+    try:
+        result = await api.hybrid_parsing(url)
+
+        video = result["video_data"]["nwm_video_url_HQ"]
+        video_hq = result["video_data"]["nwm_video_url_HQ"]
+        music = result["music"]["play_url"]["uri"]
+        caption = result["desc"]
+
+        logger.debug(f"Video URL: {video}")
+        logger.debug(f"Video_HQ URL: {video_hq}")
+        logger.debug(f"Play URL: {music}")
+        logger.debug(f"Caption: {caption}")
+
+        response_video = requests.get(video)
+        response_video_hq = requests.get(video_hq)
+
+        if response_video.status_code == 200:
+            video_stream = BytesIO(response_video.content)
+        else:
+            logger.error(f"Failed to download MP4. Status code: {response_video.status_code}")
+
+        if response_video_hq.status_code == 200:
+            video_stream_hq = BytesIO(response_video_hq.content)
+        else:
+            logger.error(f"Failed to download MP4. Status code: {response_video_hq.status_code}")
+
+        return video_stream, video_stream_hq, music, caption, video_hq
+
+    except Exception as e:
+        logger.error(f'An error occurred: {str(e)}')
+        return None
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message_type: str = update.message.chat.type
+    text: str = update.message.text
+
+    logger.debug(f'User ({update.message.chat.id}) in {message_type}: "{text}"')
+
+    if message_type == 'group':
+        if BOT_USERNAME in text:
+            new_text: str = text.replace(BOT_USERNAME, '').strip()
+        else:
+            return
+    elif message_type == 'private':
+        if "tiktok.com" in text:
+            result = await hybrid_parsing(text)
+
+            if result:
+                video = result[0]
+                video_hq = result[1]
+                music = result[2]
+                caption = result[3]
+                link = result[4]
+                text = "Link:\n" + link + "\n\n" + "Sound:\n" + music + "\n\n" + "Caption:\n" + caption
+                text_link = "Video is too large, sending link instead" + "\n\n" + "Link:\n" + link + "\n\n" + "Sound:\n" + music + "\n\n" + "Caption:\n" + caption
+
+                try:
+                    await update.message.reply_video(video=InputFile(video_hq), caption=text)
+                except Exception as e:
+                    if "Request Entity Too Large (413)" in str(e):
+                        logger.warning("Video is too large, sending link instead")
+                        await update.message.reply_text(text_link)
+            else:
+                await update.message.reply_text("Failed to process the TikTok URL. Please try again.")
+        else:
+            await update.message.reply_text("Please send a TikTok URL")
+            return
+
+async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.error(f'Update {update} caused error {context.error}')
 
 if __name__ == '__main__':
-    print('Starting bot...')
+    logger.info('Starting bot...')
     app = Application.builder().token(token).build()
 
     # Commands
@@ -44,5 +120,5 @@ if __name__ == '__main__':
     app.add_error_handler(error)
 
     # Polls the bot
-    print('Polling...')
+    logger.info('Polling...')
     app.run_polling(poll_interval=3)
