@@ -8,6 +8,21 @@ from dotenv import load_dotenv
 import logging
 from configparser import ConfigParser
 
+# Logging setup
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+# Load environment variables
+load_dotenv()
+token = os.getenv("TOKEN")
+
+if not token:
+    logger.error("Token not found. Please check your .env file.")
+    exit(1)
+else:
+    logger.debug(f"Token loaded: {token}")
+
+# Load or create config.ini
 config = ConfigParser()
 config_file = "config.ini"
 
@@ -18,25 +33,13 @@ if not os.path.exists(config_file):
 else:
     config.read(config_file)
 
+# Initialize Scraper
 api = Scraper()
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
-load_dotenv()  # Load environment variables from .env file
-token = os.getenv("TOKEN")
-
-if not token:
-    logger.error("Token not found. Please check your .env file.")
-    exit(1)
-else:
-    logger.debug(f"Token loaded: {token}")
-
-api = Scraper()
 BOT_USERNAME = '@douyindownloaderbot'
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('Support me on : https://www.paypal.me/ardha27')
+    await update.message.reply_text('Support me on: https://www.paypal.me/ardha27')
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Please type something so I can respond')
@@ -61,15 +64,8 @@ async def hybrid_parsing(url: str) -> dict:
         response_video = requests.get(video)
         response_video_hq = requests.get(video_hq)
 
-        if response_video.status_code == 200:
-            video_stream = BytesIO(response_video.content)
-        else:
-            logger.error(f"Failed to download MP4. Status code: {response_video.status_code}")
-
-        if response_video_hq.status_code == 200:
-            video_stream_hq = BytesIO(response_video_hq.content)
-        else:
-            logger.error(f"Failed to download MP4. Status code: {response_video_hq.status_code}")
+        video_stream = BytesIO(response_video.content) if response_video.status_code == 200 else None
+        video_stream_hq = BytesIO(response_video_hq.content) if response_video_hq.status_code == 200 else None
 
         return video_stream, video_stream_hq, music, caption, video_hq
 
@@ -98,8 +94,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 music = result[2]
                 caption = result[3]
                 link = result[4]
-                text = "Link:\n" + link + "\n\n" + "Sound:\n" + music + "\n\n" + "Caption:\n" + caption
-                text_link = "Video is too large, sending link instead" + "\n\n" + "Link:\n" + link + "\n\n" + "Sound:\n" + music + "\n\n" + "Caption:\n" + caption
+                text = f"Link:\n{link}\n\nSound:\n{music}\n\nCaption:\n{caption}"
+                text_link = f"Video is too large, sending link instead\n\nLink:\n{link}\n\nSound:\n{music}\n\nCaption:\n{caption}"
 
                 try:
                     await update.message.reply_video(video=InputFile(video_hq), caption=text)
@@ -111,7 +107,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text("Failed to process the TikTok URL. Please try again.")
         else:
             await update.message.reply_text("Please send a TikTok URL")
-            return
 
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.error(f'Update {update} caused error {context.error}')
