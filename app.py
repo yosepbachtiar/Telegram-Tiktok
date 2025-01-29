@@ -6,6 +6,19 @@ import requests
 from douyin_tiktok_scraper.scraper import Scraper
 from dotenv import load_dotenv
 import logging
+from configparser import ConfigParser
+
+config = ConfigParser()
+config_file = "config.ini"
+
+if not os.path.exists(config_file):
+    config["Scraper"] = {"Proxy_switch": "False"}
+    with open(config_file, "w") as f:
+        config.write(f)
+else:
+    config.read(config_file)
+
+api = Scraper()
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
