@@ -1,14 +1,17 @@
-FROM python:3.9-alpine
+# Use an official Python runtime as a parent image
+FROM python:3.9-slim
 
-ENV PYTHONFAULTHANDLER=1 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=on
-
-RUN apk --no-cache add ffmpeg
-
+# Set the working directory in the container
 WORKDIR /app
-COPY . .
-RUN pip install -r requirements.txt --no-cache-dir
 
+# Copy the requirements file into the container
+COPY requirements.txt .
+
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application code
+COPY . .
+
+# Run the application
 CMD ["python", "app.py"]
