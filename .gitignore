@@ -1,2 +1,14 @@
-/main-backup.py
+# Ignore .env file
 .env
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+
+# Ignore virtual environment
+venv/
+env/
+
+# Ignore IDE-specific files
+.vscode/
+.idea/
